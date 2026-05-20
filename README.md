@@ -11,7 +11,7 @@ Projeto extracurricular — Universidade de Brasília (UnB), Faculdade de Tecnol
 
 ## Visão geral
 
-O sistema tem três estágios. O LIDAR é capturado por `pioneer_lidar.cpp` (uma
+O sistema tem três estágios. O LIDAR é capturado por `main.cpp` (uma
 versão modificada do *grabber* do SDK SLAMTEC), que reenvia cada amostra por UDP
 para o MATLAB, onde os scripts de controle rodam.
 
@@ -22,7 +22,7 @@ RPLIDAR C1
 PC embarcado do robô ──[socat UDP:8089]──┐
                                          │ Wi-Fi
                                          ▼
-PC remoto:  pioneer_lidar.cpp ──[UDP 127.0.0.1:5000]──▶ MATLAB
+PC remoto:  main.cpp          ──[UDP 127.0.0.1:5000]──▶ MATLAB
             (grabber do SDK)                            get_lidar.m
                                                         corredor.m / seguidor.m
                                                             │
@@ -32,9 +32,9 @@ PC remoto:  pioneer_lidar.cpp ──[UDP 127.0.0.1:5000]──▶ MATLAB
                                             Pioneer 3-AT (rodas)
 ```
 
-Fluxo de dados: **LIDAR → `pioneer_lidar.cpp` → UDP `127.0.0.1:5000` → MATLAB**.
+Fluxo de dados: **LIDAR → `main.cpp` → UDP `127.0.0.1:5000` → MATLAB**.
 
-> O `pioneer_lidar.cpp` envia para `127.0.0.1`, portanto **ele e o MATLAB rodam na
+> O `main.cpp` envia para `127.0.0.1`, portanto **ele e o MATLAB rodam na
 > mesma máquina** (o PC remoto). Esse PC se conecta ao robô pela rede Wi-Fi.
 
 ---
@@ -43,7 +43,7 @@ Fluxo de dados: **LIDAR → `pioneer_lidar.cpp` → UDP `127.0.0.1:5000` → MAT
 
 ```
 .
-├── pioneer_lidar.cpp           # Grabber do SDK modificado: LIDAR → UDP 5000
+├── main.cpp                    # Grabber do SDK modificado: LIDAR → UDP 5000
 ├── corredor/
 │   ├── corredor.m              # Experimento: centralização em corredor
 │   └── get_lidar.m             # Parser dos datagramas UDP do LIDAR
@@ -83,7 +83,7 @@ parte específica do LIDAR e da execução dos experimentos.
 
 ## Compilação do grabber
 
-O `pioneer_lidar.cpp` é o app *grabber* do SDK SLAMTEC modificado: além de ler o
+O `main.cpp` é o app *grabber* do SDK SLAMTEC modificado: além de ler o
 LIDAR, ele abre um socket UDP e reenvia cada medição para o MATLAB. Ele depende
 dos cabeçalhos do SDK (`sl_lidar.h`, `sl_lidar_driver.h`), então é compilado
 **de dentro do SDK**.
@@ -91,7 +91,7 @@ dos cabeçalhos do SDK (`sl_lidar.h`, `sl_lidar_driver.h`), então é compilado
 ```bash
 # 1. Baixe e extraia o SDK do RPLIDAR C1 (site da SLAMTEC).
 # 2. Substitua o main.cpp do app do grabber pelo arquivo deste repositório:
-cp pioneer_lidar.cpp <sdk>/app/simple_grabber/main.cpp
+cp main.cpp <sdk>/app/simple_grabber/main.cpp
 
 # 3. Compile o SDK:
 cd <sdk>
@@ -115,7 +115,7 @@ sua rede:
 |-------|------|--------------|
 | IP do robô (Aria) | `corredor.m` / `seguidor.m` → `aria_init('-rh', ...)` | `192.168.0.3` |
 | Porta UDP que o MATLAB escuta | `corredor.m` / `seguidor.m` → `porta_lidar` | `5000` |
-| Destino UDP do grabber | `pioneer_lidar.cpp` → `sin_port` / `sin_addr` | `127.0.0.1:5000` |
+| Destino UDP do grabber | `main.cpp` → `sin_port` / `sin_addr` | `127.0.0.1:5000` |
 | Porta `socat` do LIDAR | comando `socat` no robô e argumento do grabber | `8089` |
 
 ---
@@ -153,7 +153,7 @@ sozinho ao fim do tempo de simulação e zera as velocidades do robô.
 
 ## Protocolo UDP
 
-O `pioneer_lidar.cpp` envia **um datagrama por ponto medido** para
+O `main.cpp` envia **um datagrama por ponto medido** para
 `127.0.0.1:5000`. Cada datagrama é uma string ASCII com três campos separados
 por vírgula:
 

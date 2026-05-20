@@ -17,7 +17,6 @@ slprj/
 # Artefatos de build C/C++
 *.o
 *.obj
-pioneer_lidar
 simple_grabber
 
 # Sistema operacional
