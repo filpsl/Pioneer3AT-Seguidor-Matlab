@@ -1,0 +1,25 @@
+# Ferramentas / configuração local
+.claude/
+openspec/
+
+# Manual (fonte LaTeX)
+Manual_Latex.txt
+
+# Saídas dos experimentos MATLAB
+*.mat
+fig_*.png
+
+# Autosave / temporários do MATLAB
+*.asv
+*.m~
+slprj/
+
+# Artefatos de build C/C++
+*.o
+*.obj
+pioneer_lidar
+simple_grabber
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
