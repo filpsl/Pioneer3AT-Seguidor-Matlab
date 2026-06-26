@@ -4,6 +4,7 @@ openspec/
 
 # Manual (fonte LaTeX)
 Manual_Latex.txt
+resultados/
 
 # Saídas dos experimentos MATLAB
 *.mat

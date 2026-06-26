@@ -1,27 +1,27 @@
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %
-% % Experimento de seguimento de parede com o robô Pioneer3AT no CoppeliaSim
+% % Experimento de seguimento de parede com o robo Pioneer3AT no CoppeliaSim
 % % usando controlador PID e um LiDAR.
 % %
 % % - Sensores:
-% %     * LiDAR: [270 graus] Distância até a parede na esquerda.
-% %     * LiDAR: [315 graus] Distância até a parede na frente-esquerda.
+% %     * LiDAR: [270 graus] Distancia ate a parede na esquerda.
+% %     * LiDAR: [315 graus] Distancia ate a parede na frente-esquerda.
 % %
 % % - Atuadores:
 % %     * Roda direita: Velocidade base
-% %     * Roda esquerda: Velocidade base - saída do controlador PID.
+% %     * Roda esquerda: Velocidade base - saida do controlador PID.
 % %
 % % - Este script:
 % %     * Pergunta qual algoritmo foi usado na sintonia (PSO / FLA / manual)
 % %       e seleciona o conjunto de ganhos correspondente.
 % %       usado no nome do arquivo de log (log_PSO_L.mat, etc.).
-% %     * Roda o algoritmo por 2 minutos (tempo de robô) com Ts = 0.05 s.
-% %     * Plota distâncias, erro e velocidade da roda esquerda.
-% %     * Salva os dados em um arquivo .mat para análise posterior.
+% %     * Roda o algoritmo por 2 minutos (tempo de robo) com Ts = 0.05 s.
+% %     * Plota distancias, erro e velocidade da roda esquerda.
+% %     * Salva os dados em um arquivo .mat para analise posterior.
 % %
-% % Código base: Mario Andrés Pastrana Triana (Out-25)
-% % Modificado e expandido por: Sérgio Cruz (Dez-25)
-% % Modificado e expandido por: Sérgio Cruz e Filipe Barbosa (May-26)
+% % Codigo base: Mario AndrÃ©s Pastrana Triana (Out-25)
+% % Modificado e expandido por: SÃ©rgio Cruz (Dez-25)
+% % Modificado e expandido por: SÃ©rgio Cruz e Filipe Barbosa (May-26)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clear;
@@ -30,13 +30,13 @@ addpath("/usr/local/Aria/matlab");
 clc;
 arrobot_disconnect;
 
-%% =================== SELEÇÃO DO ALGORITMO E CENÁRIO =======================
+%% =================== SELEï¿½ï¿½O DO ALGORITMO E CENï¿½RIO =======================
 disp('Selecione o conjunto de ganhos PID:');
 disp('  1 - PSO');
 disp('  2 - FLA');
 disp('  3 - EMP');
-disp('  4 - Manual (definir na mão)');
-algChoice = input('Opção (1/2/3): ');
+disp('  4 - Manual (definir na mao)');
+algChoice = input('Opcaoo (1/2/3): ');
 
 switch algChoice
     case 1
@@ -73,53 +73,50 @@ end
 
 fprintf('\nAlgoritmo: %s', algTag);
 fprintf('Gains PID: Kp=%.5f, Ki=%.5f, Kd=%.5f\n\n', Kp, Ki, Kd);
-cenarioTag = 'parede';
+cenarioTag = 'Parede';
 
-%% ============== INICIALIZAÇÃO PORTA UDP (LIDAR) =======================
+%% ============== INICIALIZACAOO PORTA UDP (LIDAR) =======================
 
 porta_lidar = 5000;
 udp_lidar = udpport("datagram", "IPV4", "LocalPort", porta_lidar);
 flush(udp_lidar);
 disp('Escutando LIDAR... Pressione Ctrl+C para parar.');
 
-%% ============== INICIALIZAÇÃO PIONEER =======================
-aria_init('-rh', '192.168.0.3');
+%% ============== INICIALIZACAO PIONEER =======================
+aria_init('-rh', '192.168.0.18');
 arrobot_connect
 
-%% ================= PARÂMETROS DO EXPERIMENTO =======================
+%% ================= PARAMETROS DO EXPERIMENTO =======================
 deltaT          = 0.05;        % tempo de amostragem [s]
-simTime         = 500;         % duração da simulação [s] (2 minutos)
+simTime         = 200;         % duracao da simulacao [s] (2 minutos)
 nSteps          = round(simTime * 6);
 
-ref_dist        = 60;          % setpoint da distância lateral [cm]
+ref_dist        = 55;          % setpoint da distancia lateral [cm]
 
 linear_velocity = 100.0;
-omega_max        = 300.0;
-vel_min_roda_esq = -200.0;
-vel_max_roda_esq = 200.0;
+omega_max        = 200.0;
 fact_vel         = 2;        % fator de escala da velocidade
 
-maxRange_m       = 0.9;        % alcance máximo do sensor [m]
-dist_segura_cm   = 40;         % limiar de segurança para o sensor 45° [cm]
+% maxRange_m       = 0.9;        % alcance maximo do sensor [m]
+dist_segura_cm   = 40;         % limiar de seguranca para o sensor 45 [cm]
 
-% Pré-alocação de vetores de log
-det45_cm = zeros(1, nSteps);     % medição (cm) do sensor 45°
-det90_cm = zeros(1, nSteps);     % medição (cm) do sensor 90°
+% Pre-alocacao de vetores de log
+det45_cm = zeros(1, nSteps);     % medicao (cm) do sensor 45
+det90_cm = zeros(1, nSteps);     % medicao (cm) do sensor 90
 det45_mm = 0.0;
 det90_mm = 0.0;
-% d45_cm_ant = zeros(1, nSteps);
-% d90_cm_ant = zeros(1, nSteps);
-u      = zeros(1, nSteps);     % ação de controle (vel. roda esquerda)
-error  = zeros(1, nSteps);     % erro de distância (com base no 90°)
+
+u      = zeros(1, nSteps);     % acaoo de controle (vel. roda esquerda)
+error  = zeros(1, nSteps);     % erro de distancia (com base no 90)
 const_pid = 4;
 error_max = 60;
 
-% Métricas adicionais
-satCount  = 0;                 % contador de saturação do controle
-nearCount = 0;                 % leituras muito próximas da parede
+% Metricas adicionais
+satCount  = 0;                 % contador de saturacao do controle
+nearCount = 0;                 % leituras muito proximas da parede
 rough     = 0;                 % rugosidade do controle
 
-%% ============= INICIALIZAÇÃO DO PID E FILTRO =====================
+%% ============= INICIALIZACAOO DO PID E FILTRO =====================
 tau_f     = 0.5;                        % constante de tempo do filtro [s]
 unomenosA = exp(-(deltaT/tau_f));
 alfaana   = 1 - unomenosA;
@@ -143,7 +140,7 @@ for i = 1:nSteps
     det90_cm(i) = det90_mm / 10;
     det45_cm(i) = det45_mm / 10;
 
-    % ------ Verificando se é a primeira iteração -----
+    % ------ Verificando se eh a primeira iteracao -----
     if det90_mm == -1
         if i == 1
             det90_cm(i) = ref_dist;
@@ -159,18 +156,20 @@ for i = 1:nSteps
         end
     end
 
-    % ---- Erro de distância (sensor 90°) ------
+    % ---- Erro de distancia (sensor 90) ------
+    
     error(i) = ref_dist - det90_cm(i);
+    
+    % 
+    % if error(i) > error_max
+    %     error(i) = error_max;
+    % end
+    % 
+    % if error(i) < -error_max
+    %     error(i) = -error_max;
+    % end
 
-    if error(i) > error_max
-        error(i) = error_max;
-    end
-
-    if error(i) < -error_max
-        error(i) = -error_max;
-    end
-
-    % --- Contagem de aproximações perigosas ------
+    % --- Contagem de aproximacoes perigosas ------
     if det90_cm(i) < 20
         nearCount = nearCount + 1;
     end
@@ -191,20 +190,8 @@ for i = 1:nSteps
 
     % ---- PID (roda esquerda) ----
     u(i) = Kp*error(i) + Ki*sum(interror)*deltaT + Kd*d_error;
-    % fprintf("error: %.4f\n", error(i))
-    % u(i) = Kp*error(i) + Kd*d_error;
-    % u(i) = u(i); 
 
-    % ---- Saturação e contagem ----
-    % if u(i) > vel_max_roda_esq
-    %     u(i) = vel_max_roda_esq;
-    %     satCount = satCount + 1;
-    % elseif u(i) < vel_min_roda_esq
-    %     u(i) = vel_min_roda_esq;
-    %     satCount = satCount + 1;
-    % end
-
-    % --- Saturação do Controlador ---
+    % --- Saturacao do Controlador ---
     if u(i) > omega_max
         u(i) = omega_max;
         satCount = satCount + 1;
@@ -220,17 +207,13 @@ for i = 1:nSteps
     u_prev = u(i);
     % fprintf("U: %.4f\n", u(i));
     
-    % ---- Lógica de emergência usando sensor 45° ----
+    % ---- Logica de emergencia usando sensor 45 ----
     if (det45_cm(i) < dist_segura_cm)
-        % Obstáculo mais perto na diagonal esquerda -> girar para direita
+        % Obstaculo mais perto na diagonal esquerda -> girar para direita
         v_left  =  fact_vel * 100.0;
         v_right = -fact_vel * 100.0;
-        % arrobot_setwheelvels(v_left, v_right);
-        % pause(1);
-        % continue
     else
         % Controle normal de seguimento de parede
-        %v_left = fact_vel * u(i);
         v_left  = fact_vel * linear_velocity + u(i);
         v_right = fact_vel * linear_velocity;
     end
@@ -243,7 +226,7 @@ for i = 1:nSteps
         int_count = 1;
     end
 
-    pause(deltaT);  % mantém a taxa de amostragem
+    pause(deltaT);  % mantem a taxa de amostragem
 end
 
 arrobot_setwheelvels(0, 0);
@@ -251,14 +234,14 @@ arrobot_disable_motors;
 arrobot_disconnect;
 
 % 
-% %% =================== CÁLCULO DAS MÉTRICAS ==========================
+% %% =================== CaLCULO DAS MeTRICAS ==========================
 t_vec = (0:nSteps-1) * deltaT;           % tempo em segundos
-setpoint = ref_dist * ones(1, nSteps);   % referência
+setpoint = ref_dist * ones(1, nSteps);   % referencia
 
 IAE = sum(abs(error)) * deltaT;
 SSE = error(end);
 
-fprintf('\nMétricas numéricas:\n');
+fprintf('\nMatricas numericas:\n');
 fprintf('  IAE        = %.4f\n', IAE);
 fprintf('  SSE        = %.4f\n', SSE);
 fprintf('  satCount   = %d\n',   satCount);
@@ -266,18 +249,18 @@ fprintf('  nearCount  = %d\n',   nearCount);
 fprintf('  rough      = %.4f\n', rough);
 
 %% =================== PLOTS =========================================
-% Distâncias e setpoint
+% Distancias e setpoint
 figure;
 plot(t_vec, det45_cm, 'b', 'LineWidth', 1.2); hold on;
 plot(t_vec, det90_cm, 'g', 'LineWidth', 1.2);
 plot(t_vec, setpoint,  'r--', 'LineWidth', 1.5);
 grid on;
 xlabel('Tempo (s)');
-ylabel('Distância ao obstáculo (cm)');
+ylabel('Distancia ao obstaculo (cm)');
 title(sprintf('Seguimento de parede - Alg: %s', algTag));
-legend('Distância 45^\circ', 'Distância 90^\circ', 'Setpoint','Location','best');
+legend('Distancia 45^\circ', 'Distancia 90^\circ', 'Setpoint','Location','best');
 
-% Ação de controle e erro
+% Acaoo de controle e erro
 figure;
 yyaxis left;
 plot(t_vec, u, 'b', 'LineWidth', 1.2);
@@ -285,35 +268,40 @@ ylabel('Velocidade roda esquerda');
 
 yyaxis right;
 plot(t_vec, error, 'r', 'LineWidth', 1.0);
-ylabel('Erro de distância (cm)');
+ylabel('Erro de distancia (cm)');
 
 grid on;
 xlabel('Tempo (s)');
-title(sprintf('Controle PID - Alg: %s | Cenário: %s', algTag, cenarioTag));
-legend('Velo roda esquerda', 'Erro de distância','Location','best');
+title(sprintf('Controle PID - Alg: %s | Cenario: %s', algTag, cenarioTag));
+legend('Velo roda esquerda', 'Erro de distancia','Location','best');
 
-% %% =================== SALVAMENTO AUTOMÁTICO DAS FIGURAS ==========================
-% figDistNamePNG  = sprintf('fig_dist_%s_%s.png',  algTag, cenarioTag);
-% figCtrlNamePNG  = sprintf('fig_ctrl_%s_%s.png',  algTag, cenarioTag);
-% 
-% % Salva a figura da distância (primeira figura)
-% figure(1);
-% set(gcf,'PaperPositionMode','auto');
-% saveas(gcf, figDistNamePNG);
-% 
-% % Salva a figura da ação de controle (segunda figura)
-% figure(2);
-% set(gcf,'PaperPositionMode','auto');
-% saveas(gcf, figCtrlNamePNG);
-% 
-% fprintf('\nFiguras salvas como:\n  %s\n  %s\n', ...
-%         figDistNamePNG, figCtrlNamePNG);
-% 
-% 
-% %% =================== SALVAMENTO DOS DADOS ==========================
-% logFileName = sprintf('log_%s_%s.mat', algTag, cenarioTag);
-% save(logFileName, ...
-%      'd45_cm','d90_cm','u','error','deltaT','Kp','Ki','Kd', ...
-%      'IAE','SSE','rough','nearCount','satCount','t_vec','ref_dist');
-% 
-% fprintf('\nLog salvo em: %s\n', logFileName);
+%% =================== SALVAMENTO AUTOMATICO DAS FIGURAS ==========================
+timestamp       = datestr(now, 'yyyymmdd_HHMMSS'); %#ok<TNOW1,DATST>
+figDistNamePNG  = sprintf('fig_dist_%s_%s_%s.png', algTag, cenarioTag, timestamp);
+figCtrlNamePNG  = sprintf('fig_ctrl_%s_%s_%s.png', algTag, cenarioTag, timestamp);
+
+figPath = "resultados";
+
+% Salva a figura da distancia (primeira figura)
+figure(1);
+set(gcf,'PaperPositionMode','auto');
+saveas(gcf, fullfile(figPath, figDistNamePNG));
+
+% Salva a figura da acao de controle (segunda figura)
+figure(2);
+set(gcf,'PaperPositionMode','auto');
+saveas(gcf, fullfile(figPath, figCtrlNamePNG));
+
+fprintf('\nFiguras salvas como:\n  %s\n  %s\n', ...
+        figDistNamePNG, figCtrlNamePNG);
+
+
+%% =================== SALVAMENTO DOS DADOS ==========================
+logFileName = sprintf('log_%s_%s_%s.mat', algTag, cenarioTag, timestamp);
+logFilePath = "resultados";
+
+save(fullfile(logFilePath, logFileName), ...
+     'det45_cm','det90_cm','u','error','deltaT','Kp','Ki','Kd', ...
+     'IAE','SSE','rough','nearCount','satCount','t_vec','ref_dist');
+
+fprintf('\nLog salvo em: %s\n', logFileName);

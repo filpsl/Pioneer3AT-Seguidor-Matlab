@@ -1,7 +1,7 @@
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % %
-% % Experimento de manter o posicionamento do robô Pioneer3AT sempre no meio 
-% % de um corredor. (Distância entre a parede esquerda = Distância entre a
+% % Experimento de manter o posicionamento do robo Pioneer3AT sempre no meio 
+% % de um corredor. (Distancia entre a parede esquerda = Distancia entre a
 % % parede direita.) usando controlador PID e um LiDAR.
 % %
 % % - Sensores:
@@ -10,17 +10,17 @@
 % %       mente.
 % %
 % % - Atuadores:
-% %     * Roda direita: Velocidade base - saída do controlador PID
-% %     * Roda esquerda: Velocidade base + saída do controlador PID
+% %     * Roda direita: Velocidade base - saida do controlador PID
+% %     * Roda esquerda: Velocidade base + saida do controlador PID
 % %
 % % - Este script:
 % %     * Pergunta qual algoritmo foi usado na sintonia (PSO / FLA / manual)
 % %       e seleciona o conjunto de ganhos correspondente.
-% %     * Roda a simulação por 2 minutos (tempo de robô) com Ts = 0.05 s.
-% %     * Plota distâncias, erros e velocidades das rodas.
-% %     * Salva os dados em um arquivo .mat para análise posterior.
+% %     * Roda a simulacao por 2 minutos (tempo de robo) com Ts = 0.05 s.
+% %     * Plota distancias, erros e velocidades das rodas.
+% %     * Salva os dados em um arquivo .mat para analise posterior.
 % %
-% % Código base: Mario Andrés Pastrana Triana (Out-25)
+% % Codigo base: Mario Andrés Pastrana Triana (Out-25)
 % % Modificado e expandido por: Sérgio Cruz (Dez-25)
 % % Modificado e expandido por: Sérgio Cruz e Filipe Barbosa (May-26)
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,7 +68,7 @@ end
 
 fprintf('\nAlgoritmo: %s', algTag);
 fprintf('Gains PID: Kp=%.5f, Ki=%.5f, Kd=%.5f\n\n', Kp, Ki, Kd);
-cenarioTag = 'corredor';
+cenarioTag = 'Corredor';
 
 %% ============== INICIALIZAÇÃO PORTA UDP (LIDAR) =======================
 
@@ -78,19 +78,19 @@ flush(udp_lidar);
 disp('Escutando LIDAR... Pressione Ctrl+C para parar.');
 
 %% ============== INICIALIZAÇÃO PIONEER =======================
-aria_init('-rh', '192.168.0.3');
+aria_init('-rh', '192.168.0.18');
 arrobot_connect
 
 %% ================= PARÂMETROS DO EXPERIMENTO =======================
 deltaT          = 0.05;        % tempo de amostragem [s]
-simTime         = 300;         % duração da simulação [s] (2 minutos)
+simTime         = 200;         % duração da simulação [s] (2 minutos)
 nSteps          = round(simTime * 6);
 
 ref_dist        = 60;          % setpoint da distância lateral [cm]
 
 linear_velocity  = 100.0;
 omega_max = 100.0;
-fact_vel         = 1;        % fator de escala da velocidade
+fact_vel         = 2;        % fator de escala da velocidade
 
 maxRange_m       = 0.9;        % alcance máximo do sensor [m]
 dist_segura_cm   = 40;         % limiar de segurança para o lidar° [cm]
@@ -250,7 +250,7 @@ arrobot_disconnect;
 % 
 % %% =================== CÁLCULO DAS MÉTRICAS ==========================
 t_vec = (0:nSteps-1) * deltaT;           % tempo em segundos
-setpoint = ref_dist * ones(1, nSteps);   % referência
+setpoint = (left_dist + right_dist) / 2;   % referência
 
 IAE = sum(abs(error)) * deltaT;
 SSE = error(end);
@@ -264,52 +264,57 @@ fprintf('  rough      = %.4f\n', rough);
 %% =================== PLOTS =========================================
 % Distâncias e setpoint
 figure;
-plot(t_vec, front_left_dist, 'b', 'LineWidth', 1.2); hold on;
-plot(t_vec, left_dist, 'g', 'LineWidth', 1.2);
+plot(t_vec, left_dist, 'b', 'LineWidth', 1.2); hold on;
+plot(t_vec, right_dist, 'g', 'LineWidth', 1.2);
 plot(t_vec, setpoint,  'r--', 'LineWidth', 1.5);
 grid on;
 xlabel('Tempo (s)');
-ylabel('Distância ao obstáculo (cm)');
-title(sprintf('Seguimento de parede - Alg: %s', algTag));
-legend('Distância 45^\circ', 'Distância 90^\circ', 'Setpoint','Location','best');
+ylabel('Distâncias (cm)');
+title(sprintf('Seguindo Corredor Pelo Meio - Alg: %s', algTag));
+legend('Distância Esquerda', 'Distância Direita', 'Setpoint','Location','best');
 
 % Ação de controle e erro
 figure;
-yyaxis left;
-plot(t_vec, u, 'b', 'LineWidth', 1.2);
-ylabel('Velocidade roda esquerda');
-
-yyaxis right;
-plot(t_vec, error, 'r', 'LineWidth', 1.0);
-ylabel('Erro de distância (cm)');
-
+plot(t_vec, linear_velocity + u, 'b', 'LineWidth', 1.2); hold on;
+plot(t_vec, linear_velocity - u, 'g', 'LineWidth', 1.2);
+plot(t_vec, error, 'r--', 'LineWidth', 1.5)
 grid on;
 xlabel('Tempo (s)');
+ylabel('Velocidades (cm)');
 title(sprintf('Controle PID - Alg: %s | Cenário: %s', algTag, cenarioTag));
-legend('Velo roda esquerda', 'Erro de distância','Location','best');
+legend('Vel. Roda Esquerda', 'Vel. Roda Direita','Erro de distância','Location','best');
+
+% yyaxis right;
+% plot(t_vec, error, 'r', 'LineWidth', 1.0);
+% ylabel('Erro de distância até o centro do corredor (cm)');
 
 %% =================== SALVAMENTO AUTOMÁTICO DAS FIGURAS ==========================
-figDistNamePNG  = sprintf('fig_dist_%s_%s.png',  algTag, cenarioTag);
-figCtrlNamePNG  = sprintf('fig_ctrl_%s_%s.png',  algTag, cenarioTag);
+timestamp       = datestr(now, 'yyyymmdd_HHMMSS');
+figDistNamePNG  = sprintf('fig_dist_%s_%s_%s.png', algTag, cenarioTag, timestamp);
+figCtrlNamePNG  = sprintf('fig_ctrl_%s_%s_%s.png', algTag, cenarioTag, timestamp);
+
+figPath = "resultados";
 
 % Salva a figura da distância (primeira figura)
 figure(1);
 set(gcf,'PaperPositionMode','auto');
-saveas(gcf, figDistNamePNG);
+saveas(gcf, fullfile(figPath,figDistNamePNG));
 
 % Salva a figura da ação de controle (segunda figura)
 figure(2);
 set(gcf,'PaperPositionMode','auto');
-saveas(gcf, figCtrlNamePNG);
+saveas(gcf, fullfile(figPath, figCtrlNamePNG));
 
 fprintf('\nFiguras salvas como:\n  %s\n  %s\n', ...
         figDistNamePNG, figCtrlNamePNG);
 
 
 %% =================== SALVAMENTO DOS DADOS ==========================
-logFileName = sprintf('log_%s_%s.mat', algTag, cenarioTag);
-save(logFileName, ...
-     'left_dist','front_left_dist','right_dist','front_right_dist','u','error','deltaT','Kp','Ki','Kd', ...
+logFileName = sprintf('log_%s_%s_%s.mat', algTag, cenarioTag, timestamp);
+logFilePath = "resultados";
+
+save(fullfile(logFilePath, logFileName), ...
+     'left_dist','front_left_dist', 'right_dist', 'front_right_dist','u','error','deltaT','Kp','Ki','Kd', ...
      'IAE','SSE','rough','nearCount','satCount','t_vec','ref_dist');
 
 fprintf('\nLog salvo em: %s\n', logFileName);
