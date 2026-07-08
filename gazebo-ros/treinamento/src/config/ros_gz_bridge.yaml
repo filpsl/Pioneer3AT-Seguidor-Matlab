@@ -1,0 +1,45 @@
+# Configuração da ponte ros_gz_bridge (parameter_bridge).
+# Cada item liga um tópico ROS 2 a um tópico gz-sim, com os tipos de cada lado.
+# direction: ROS_TO_GZ | GZ_TO_ROS | BIDIRECTIONAL
+
+# Comando de velocidade: ROS 2 -> Gazebo (consumido pelo DiffDrive)
+- ros_topic_name: "/cmd_vel"
+  gz_topic_name: "/cmd_vel"
+  ros_type_name: "geometry_msgs/msg/Twist"
+  gz_type_name: "gz.msgs.Twist"
+  direction: ROS_TO_GZ
+
+# Odometria: Gazebo -> ROS 2
+- ros_topic_name: "/odom"
+  gz_topic_name: "/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS
+
+# Transformadas (odom->base_link do DiffDrive): Gazebo -> ROS 2
+- ros_topic_name: "/tf"
+  gz_topic_name: "/tf"
+  ros_type_name: "tf2_msgs/msg/TFMessage"
+  gz_type_name: "gz.msgs.Pose_V"
+  direction: GZ_TO_ROS
+
+# Estados das juntas: Gazebo -> ROS 2
+- ros_topic_name: "/joint_states"
+  gz_topic_name: "/joint_states"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
+
+# LiDAR: Gazebo -> ROS 2
+- ros_topic_name: "/scan"
+  gz_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
+# Relógio da simulação: Gazebo -> ROS 2 (para use_sim_time)
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS

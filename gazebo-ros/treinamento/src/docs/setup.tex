@@ -1,0 +1,334 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{fancyhdr}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+
+% ---------- Estilo dos blocos de comando ----------
+\definecolor{bgcode}{rgb}{0.96,0.96,0.96}
+\definecolor{cmt}{rgb}{0.30,0.55,0.30}
+\lstdefinestyle{bash}{
+  language=bash,
+  backgroundcolor=\color{bgcode},
+  basicstyle=\ttfamily\small,
+  commentstyle=\color{cmt},
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!40},
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  morecomment=[l]{\#},
+  xleftmargin=4pt,
+  framexleftmargin=4pt,
+}
+\lstset{style=bash}
+
+% ---------- Cabeçalho/rodapé ----------
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Pioneer 3-AT}
+\rhead{ROS 2 Humble + Gazebo Harmonic}
+\cfoot{\thepage}
+
+\title{\textbf{Pioneer 3-AT em ROS 2 Humble + Gazebo Harmonic}\\[0.3em]
+\large Guia de instalação e execução (passo a passo)}
+\author{Projeto \texttt{ros-pioneer3at} --- migração ROS 2}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Este documento descreve, passo a passo, como instalar e executar a simulação do
+robô \textbf{Pioneer 3-AT} em \textbf{ROS 2 Humble} com \textbf{Gazebo Harmonic}
+(gz-sim 8). Ao final, você terá o robô em um mundo simulado, controlável pelo
+teclado, com odometria, transformadas (TF) e um sensor LiDAR publicados para o
+ROS 2 e visualizados no RViz2. Este pacote é uma migração do projeto original em
+ROS 1 + Gazebo Classic; o código antigo permanece em \texttt{legacy\_ros1/}.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+% =====================================================================
+\section{Pré-requisitos}
+% =====================================================================
+
+\begin{itemize}
+  \item \textbf{Sistema operacional:} Ubuntu 22.04 (ou base equivalente, ex.\ Zorin OS 17).
+  \item \textbf{ROS 2 Humble} (\texttt{ros-humble-desktop}).
+  \item \textbf{Gazebo Harmonic} (gz-sim 8.x).
+  \item \texttt{git} e \texttt{colcon} para clonar e compilar.
+\end{itemize}
+
+\noindent
+Confirme as versões antes de começar:
+
+\begin{lstlisting}
+source /opt/ros/humble/setup.bash
+ros2 --version       # deve indicar Humble
+gz sim --version     # deve indicar 8.x (Harmonic)
+\end{lstlisting}
+
+% =====================================================================
+\section{Instalação}
+% =====================================================================
+
+\subsection{Instalar as dependências}
+
+Instale os pacotes de integração ROS$\leftrightarrow$Gazebo e os utilitários
+usados pelo projeto:
+
+\begin{lstlisting}
+sudo apt update
+sudo apt install \
+  ros-humble-ros-gz-sim \
+  ros-humble-ros-gz-bridge \
+  ros-humble-xacro \
+  ros-humble-robot-state-publisher \
+  ros-humble-joint-state-publisher-gui \
+  ros-humble-teleop-twist-keyboard \
+  ros-humble-rviz2
+\end{lstlisting}
+
+\subsection{Clonar o repositório}
+
+Clone o projeto e selecione a branch da migração ROS 2. Ajuste a URL para o seu
+repositório/fork:
+
+\begin{lstlisting}
+# escolha uma pasta de trabalho qualquer
+cd ~/Documentos
+git clone <URL-DO-REPOSITORIO> ros-pioneer3at
+cd ros-pioneer3at
+git checkout ros2-humble-harmonic-migration
+\end{lstlisting}
+
+\subsection{Criar o workspace e compilar}
+
+O ROS 2 compila pacotes dentro de um \emph{workspace} colcon (uma pasta com um
+subdiretório \texttt{src/}). Vamos criar um workspace e colocar este pacote
+dentro dele por meio de um \emph{symlink} (atalho), de forma que as pastas de
+build fiquem fora do repositório:
+
+\begin{lstlisting}
+mkdir -p ~/ros2_ws/src
+ln -s ~/Documentos/ros-pioneer3at ~/ros2_ws/src/pioneer3at
+
+cd ~/ros2_ws
+colcon build --packages-select pioneer3at
+\end{lstlisting}
+
+\noindent
+Sempre que abrir um terminal novo para usar o projeto, \textbf{carregue o
+ambiente} (ROS 2 + workspace):
+
+\begin{lstlisting}
+source /opt/ros/humble/setup.bash
+source ~/ros2_ws/install/setup.bash
+\end{lstlisting}
+
+\noindent
+\textit{Dica:} para não repetir isso toda vez, adicione as duas linhas acima ao
+final do seu \texttt{\textasciitilde/.bashrc}.
+
+% =====================================================================
+\section{Executando a simulação}
+% =====================================================================
+
+\subsection{Simulação completa (Gazebo + RViz)}
+
+Sobe, em um único comando, o Gazebo Harmonic com o mundo, o robô, a ponte
+ROS$\leftrightarrow$Gazebo e o RViz2:
+
+\begin{lstlisting}
+ros2 launch pioneer3at simulation.launch.py rviz:=true
+\end{lstlisting}
+
+\noindent
+Sem o RViz (apenas Gazebo + ponte):
+
+\begin{lstlisting}
+ros2 launch pioneer3at simulation.launch.py
+\end{lstlisting}
+
+\noindent
+Argumentos disponíveis:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Argumento} & \textbf{Padrão} & \textbf{Descrição} \\
+\midrule
+\texttt{world}        & \texttt{pioneer\_world.sdf} & arquivo \texttt{.sdf} do mundo \\
+\texttt{rviz}         & \texttt{false}              & abre o RViz2 \\
+\texttt{use\_sim\_time} & \texttt{true}             & usa o relógio da simulação \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Dirigir o robô pelo teclado (teleop)}
+
+Com a simulação aberta, abra \textbf{outro terminal}, carregue o ambiente
+(Seção~2.3) e rode:
+
+\begin{lstlisting}
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
+\end{lstlisting}
+
+\noindent
+Mantenha essa janela em foco e use as teclas indicadas na tela. As principais:
+
+\begin{center}
+\begin{tabular}{cl}
+\toprule
+\textbf{Tecla} & \textbf{Ação} \\
+\midrule
+\texttt{i} & andar para frente \\
+\texttt{,} & andar para tr\'as \\
+\texttt{j} & girar para a esquerda \\
+\texttt{l} & girar para a direita \\
+\texttt{k} & parar \\
+\texttt{q} / \texttt{z} & aumentar / diminuir a velocidade \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Os comandos saem no t\'opico \texttt{/cmd\_vel}, s\~ao levados ao Gazebo pela
+ponte e movem o rob\^o.
+
+\subsection{Teste rápido sem teclado}
+
+Para verificar o movimento sem o teleop, publique uma velocidade diretamente:
+
+\begin{lstlisting}
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist '{linear: {x: 0.3}}'
+\end{lstlisting}
+
+\noindent
+O robô deve andar para frente. Pressione \texttt{Ctrl+C} para parar de publicar.
+
+\subsection{Visualizar apenas o modelo (sliders das juntas)}
+
+Para inspecionar a montagem do robô \emph{sem} o Gazebo, usando sliders manuais
+para girar as rodas:
+
+\begin{lstlisting}
+ros2 launch pioneer3at display.launch.py
+\end{lstlisting}
+
+\noindent
+Abrem-se o RViz2 (com o modelo) e a janela do
+\texttt{joint\_state\_publisher\_gui} (com 4 sliders, um por roda). Arraste os
+sliders e confira que cada roda gira em torno do eixo correto e que todos os
+links estão conectados na árvore de TF.
+
+% =====================================================================
+\section{Tópicos principais}
+% =====================================================================
+
+Com a simulação rodando, liste os tópicos com \texttt{ros2 topic list}. Os
+principais:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Tópico} & \textbf{Tipo} & \textbf{Sentido} \\
+\midrule
+\texttt{/cmd\_vel}     & \texttt{geometry\_msgs/msg/Twist}     & ROS $\rightarrow$ Gazebo \\
+\texttt{/odom}         & \texttt{nav\_msgs/msg/Odometry}       & Gazebo $\rightarrow$ ROS \\
+\texttt{/tf}           & \texttt{tf2\_msgs/msg/TFMessage}      & Gazebo $\rightarrow$ ROS \\
+\texttt{/joint\_states} & \texttt{sensor\_msgs/msg/JointState} & Gazebo $\rightarrow$ ROS \\
+\texttt{/scan}         & \texttt{sensor\_msgs/msg/LaserScan}   & Gazebo $\rightarrow$ ROS \\
+\texttt{/clock}        & \texttt{rosgraph\_msgs/msg/Clock}     & Gazebo $\rightarrow$ ROS \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Exemplos de inspeção:
+
+\begin{lstlisting}
+ros2 topic echo /odom          # odometria
+ros2 topic echo /scan          # leitura do LiDAR
+ros2 topic hz /clock           # taxa do relogio de simulacao
+\end{lstlisting}
+
+% =====================================================================
+\section{Estrutura do projeto}
+% =====================================================================
+
+\begin{lstlisting}
+urdf/pioneer3at.urdf.xacro   # descricao do robo (visual + colisao + inercia + plugins)
+worlds/pioneer_world.sdf     # mundo do Gazebo Harmonic (chao, luz, obstaculo)
+config/ros_gz_bridge.yaml    # mapeamento de topicos ROS <-> Gazebo
+config/pioneer3at.rviz       # config do RViz para a simulacao (frame odom)
+config/pioneer3at_display.rviz # config do RViz para o display (frame base_link)
+launch/
+  simulation.launch.py       # bringup completo (gazebo + spawn + bridge + rviz)
+  gazebo.launch.py           # so o Gazebo + mundo
+  spawn_robot.launch.py      # robot_state_publisher + spawn no gz
+  bridge.launch.py           # so a ponte ros_gz_bridge
+  display.launch.py          # so RViz com o modelo + sliders (sem Gazebo)
+meshes/                      # malhas STL (reaproveitadas do projeto original)
+legacy_ros1/                 # codigo ROS 1 / Gazebo Classic original (referencia)
+\end{lstlisting}
+
+% =====================================================================
+\section{Solução de problemas}
+% =====================================================================
+
+\begin{description}
+  \item[O robô não aparece no Gazebo / malhas não carregam.]
+  Verifique se o ambiente está carregado (Seção~2.3) e recompile. O launch
+  define automaticamente \texttt{GZ\_SIM\_RESOURCE\_PATH} para que o Gazebo
+  resolva os caminhos \texttt{package://pioneer3at/...}.
+
+  \item[Avisos ``Detected jump back in time'' e o robô pisca no RViz.]
+  Ocorre quando o RViz inicia antes do relógio de simulação (\texttt{/clock})
+  estar disponível. O \texttt{simulation.launch.py} já mitiga isso iniciando o
+  RViz alguns segundos depois do Gazebo. Confirme também que o RViz usa tempo de
+  simulação: \texttt{ros2 param get /rviz2 use\_sim\_time} deve retornar
+  \texttt{True}.
+
+  \item[\texttt{display.launch.py} abre, mas o robô não aparece.]
+  Esse modo usa o frame fixo \texttt{base\_link} (não há \texttt{odom} sem o
+  Gazebo). Garanta que está usando a config \texttt{pioneer3at\_display.rviz}
+  (já é o padrão do launch).
+
+  \item[Alterei arquivos do pacote e nada mudou.]
+  Recompile e recarregue o ambiente:
+  \begin{lstlisting}
+cd ~/ros2_ws && colcon build --packages-select pioneer3at
+source install/setup.bash
+  \end{lstlisting}
+\end{description}
+
+% =====================================================================
+\section{Trabalho futuro}
+% =====================================================================
+
+A base de simulação já publica \texttt{/odom}, \texttt{/tf} e \texttt{/scan}, que
+são os pré-requisitos para:
+
+\begin{itemize}
+  \item \textbf{Navegação autônoma} com o \textbf{Nav2}.
+  \item \textbf{Mapeamento (SLAM)} com o \textbf{slam\_toolbox}.
+\end{itemize}
+
+\noindent
+Esses recursos substituem o antigo \texttt{move\_base} / \texttt{gmapping} /
+\texttt{amcl} do projeto em ROS 1.
+
+\end{document}
